@@ -31,6 +31,52 @@ type OrderDetails struct {
 	Status          string
 }
 
+type PatientPayload struct {
+	Patient struct {
+		Id          string `json:"id"`
+		Mrn         string `json:"mrn"`
+		MrnAssigner string `json:"mrnAssigner"`
+		Identifier  []struct {
+			Value string `json:"value"`
+			Type  string `json:"type"`
+		} `json:"identifier"`
+		HealthInsurance struct {
+			Type         string `json:"type"`
+			SubscriberId string `json:"subscriberId"`
+		} `json:"healthInsurance"`
+		LastName                 string `json:"lastName"`
+		FirstName                string `json:"firstName"`
+		DateOfBirth              string `json:"dateOfBirth"`
+		Gender                   string `json:"gender"`
+		Ethnicity                string `json:"ethnicity"`
+		AddressLine1             string `json:"addressLine1"`
+		AddressLine2             string `json:"addressLine2"`
+		City                     string `json:"city"`
+		EmailAddress             string `json:"emailAddress"`
+		PhoneHome                string `json:"phoneHome"`
+		PhoneMobile              string `json:"phoneMobile"`
+		PhoneWork                string `json:"phoneWork"`
+		PreferredMethodOfContact string `json:"preferredMethodOfContact"`
+		Race                     string `json:"race"`
+		State                    string `json:"state"`
+		Country                  string `json:"country"`
+		Zip                      string `json:"zip"`
+	} `json:"patient"`
+}
+
+type OrderPayload struct {
+	PatientId    string `json:"patientId"`
+	Appointments []struct {
+		EmrId      string    `json:"emrId"`
+		Date       time.Time `json:"date"`
+		EndDate    time.Time `json:"endDate"`
+		FacilityId string    `json:"facilityId"`
+		ProviderId string    `json:"providerId"`
+		Status     string    `json:"status"`
+		Type       string    `json:"type"`
+	} `json:"appointments"`
+}
+
 var (
 	port     = flag.Int("port", 8443, "port to serve the directory")
 	username = flag.String("username", "", "username")
@@ -86,8 +132,6 @@ func notify(w http.ResponseWriter, msg string, statuscode int) {
 
 func postPatient(w http.ResponseWriter, r *http.Request) {
 	action := func() error {
-		return fmt.Errorf("asdjföjashöf")
-
 		patientDetails := PatientDetails{
 			ID:        r.FormValue("ID"),
 			LastName:  r.FormValue("LastName"),

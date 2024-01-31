@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<head>
+<head xmlns="http://www.w3.org/1999/html">
     <title>YALOWWEB</title>
     <style>
         .label {
@@ -24,7 +24,7 @@
                 <legend>Patient</legend>
 
                 <label for="ID" class="label">ID</label>
-                <input type="text" id="ID" name="ID"/><br>
+                <input type="text" id="ID" name="ID" autofocus/><br>
 
                 <label for="LastName" class="label">LastName</label>
                 <input type="text" id="LastName" name="LastName"/><br>
@@ -35,8 +35,12 @@
                 <label for="BirthDate" class="label">BirthDate</label>
                 <input type="date" id="BirthDate" name="BirthDate"/><br>
 
-                <label for="Sex" class="label">Sex</label>
-                <input type="text" id="Sex" name="Sex"/><br>
+                <fieldset>
+                    <legend>Sex</legend>
+                    <input type="radio" name="Sex" value="MALE" checked>Male</input><br>
+                    <input type="radio" name="Sex" value="FEMALE">Female</input><br>
+                    <input type="radio" name="Sex" value="">Undefined</input><br>
+                </fieldset>
 
                 <input type="checkbox" id="Worklist" name="Worklist" value="true">Worklist</input><br>
 
@@ -61,8 +65,20 @@
                 <label for="EndDate" class="label">EndDate</label>
                 <input type="date" id="EndDate" name="EndDate"/><br>
 
-                <label for="Status" class="label">Status</label>
-                <input type="text" id="Status" name="Status"/><br>
+                <label for="Status" class="label">EndDate</label>
+                <fieldset id="Status" style="margin-bottom: 8px;">
+                    <legend>Status</legend>
+                    <input type="radio" name="Status" value="PROPOSED" checked>Proposed</input><br>
+                    <input type="radio" name="Status" value="PENDING">Pending</input><br>
+                    <input type="radio" name="Status" value="BOOKED">Booked</input><br>
+                    <input type="radio" name="Status" value="ARRIVED">Arrived</input><br>
+                    <input type="radio" name="Status" value="FULFILLED">Fulfilled</input><br>
+                    <input type="radio" name="Status" value="CANCELLED">Cancelled</input><br>
+                    <input type="radio" name="Status" value="NOSHOW">Nowshow</input><br>
+                    <input type="radio" name="Status" value="ENTERED-IN-ERROR">Entered-in-error</input><br>
+                    <input type="radio" name="Status" value="CHECKED-IN">Checked-in</input><br>
+                    <input type="radio" name="Status" value="WAITLIST">Waitlist</input><br>
+                </fieldset>
 
                 <input type="submit">
             </fieldset>
