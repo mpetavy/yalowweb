@@ -1,15 +1,72 @@
-<!-- forms.html -->
-{{if .Success}}
-<h1>Thanks for your message!</h1>
-{{else}}
-<h1>Contact</h1>
-<form method="POST">
-    <label>Email:</label><br />
-    <input type="text" name="email"><br />
-    <label>Subject:</label><br />
-    <input type="text" name="subject"><br />
-    <label>Message:</label><br />
-    <textarea name="message"></textarea><br />
-    <input type="submit">
-</form>
-{{end}}
+<!DOCTYPE html>
+<head>
+    <title>YALOWWEB</title>
+    <style>
+        .label {
+            display: inline-flex;
+            width: 160px;
+            margin-bottom: 8px;
+        }
+
+        form input[type=checkbox] {
+            margin-left: 0;
+            margin-top: 4px;
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+<body>
+<div style="width: 800px; margin: auto;">
+    <h1 style="text-align:center">YALOWWEB</h1>
+    <div style="float: left;">
+        <form method="POST" action="/patient">
+            <fieldset>
+                <legend>Patient</legend>
+
+                <label for="ID" class="label">ID</label>
+                <input type="text" id="ID" name="ID"/><br>
+
+                <label for="LastName" class="label">LastName</label>
+                <input type="text" id="LastName" name="LastName"/><br>
+
+                <label for="FirstName" class="label">FirstName</label>
+                <input type="text" id="FirstName" name="FirstName"/><br>
+
+                <label for="BirthDate" class="label">BirthDate</label>
+                <input type="date" id="BirthDate" name="BirthDate"/><br>
+
+                <label for="Sex" class="label">Sex</label>
+                <input type="text" id="Sex" name="Sex"/><br>
+
+                <input type="checkbox" id="Worklist" name="Worklist" value="true">Worklist</input><br>
+
+                <input type="submit">
+            </fieldset>
+        </form>
+    </div>
+    <div style="float: right;">
+        <form method="POST" action="/order">
+            <fieldset>
+                <legend>Order</legend>
+
+                <label for="ID" class="label">ID</label>
+                <input type="text" id="ID" name="ID"/><br>
+
+                <label for="AccessionNumber" class="label">AccessionNumber</label>
+                <input type="text" id="AccessionNumber" name="AccessionNumber"/><br>
+
+                <label for="StartDate" class="label">StartDate</label>
+                <input type="date" id="StartDate" name="StartDate"/><br>
+
+                <label for="EndDate" class="label">EndDate</label>
+                <input type="date" id="EndDate" name="EndDate"/><br>
+
+                <label for="Status" class="label">Status</label>
+                <input type="text" id="Status" name="Status"/><br>
+
+                <input type="submit">
+            </fieldset>
+        </form>
+    </div>
+</div>
+</body>

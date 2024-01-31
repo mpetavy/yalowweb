@@ -1,17 +1,16 @@
 package main
 
 import (
-	"crypto/ecdsa"
+	"context"
 	"crypto/sha256"
 	"crypto/subtle"
+	"crypto/tls"
 	"embed"
-	"encoding/pem"
 	"flag"
 	"fmt"
 	"github.com/mpetavy/common"
 	"html/template"
 	"net/http"
-	"os"
 	"time"
 )
 
@@ -33,79 +32,61 @@ type OrderDetails struct {
 }
 
 var (
-	dir          = flag.String("d", "", "directory to serve")
-	port         = flag.Int("port", 8443, "port to serve the directory")
-	username     = flag.String("username", "", "username")
-	password     = flag.String("password", "", "password")
-	useTls       = flag.Bool("tls", false, "use TLS")
-	certFilename = flag.String("certfile", "", "x509 cert filename")
-	keyFilename  = flag.String("keyfile", "", "x509 private key filename")
-	certFile     *os.File
-	keyFile      *os.File
+	port     = flag.Int("port", 8443, "port to serve the directory")
+	username = flag.String("username", "", "username")
+	password = flag.String("password", "", "password")
+	useTls   = flag.Bool("tls", false, "use TLS")
+
+	srv     *http.Server
+	srvDone chan struct{}
 )
 
 //go:embed go.mod
 var resources embed.FS
 
 func init() {
-	common.Init("", "", "", "", "", "", "", "", &resources, start, nil, nil, 0)
+	common.Init("", "", "", "", "", "", "", "", &resources, start, stop, nil, 0)
 }
 
-func start() error {
-	if *useTls && *certFilename == "" {
-		tlsConfig, err := common.NewTlsConfigFromFlags()
+func getIndex(w http.ResponseWriter, r *http.Request) {
+	action := func() error {
+		tmpl, err := template.ParseFiles("index.html")
 		if common.Error(err) {
 			return err
 		}
 
-		certPEM := common.CertificateAsPEM(&tlsConfig.Certificates[0])
-		certBytes, _ := pem.Decode(certPEM)
-		if certBytes == nil {
-			return fmt.Errorf("cannot find PEM block with certificate")
-		}
-
-		certFile, err = common.CreateTempFile()
-		if common.Error(err) {
-			return err
-		}
-		*certFilename = certFile.Name()
-
-		err = os.WriteFile(certFile.Name(), certPEM, common.DefaultFileMode)
+		err = tmpl.Execute(w, nil)
 		if common.Error(err) {
 			return err
 		}
 
-		keyPEM, err := common.PrivateKeyAsPEM(tlsConfig.Certificates[0].PrivateKey.(*ecdsa.PrivateKey))
-		if common.Error(err) {
-			return err
-		}
-		keyBytes, _ := pem.Decode(keyPEM)
-		if keyBytes == nil {
-			return fmt.Errorf("cannot find PEM block with key")
-		}
-
-		keyFile, err = common.CreateTempFile()
-		if common.Error(err) {
-			return err
-		}
-		*keyFilename = keyFile.Name()
-
-		err = os.WriteFile(keyFile.Name(), keyPEM, common.DefaultFileMode)
-		if common.Error(err) {
-			return err
-		}
+		return nil
 	}
 
-	tmpl, err := template.ParseFiles("index.html")
+	err := action()
 	if common.Error(err) {
-		return err
+		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
+}
 
-	indexFunc := func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			tmpl.Execute(w, nil)
-			return
-		}
+func notify(w http.ResponseWriter, msg string, statuscode int) {
+	content := `
+<html>
+    <head>
+        <meta http-equiv="refresh" content="2;url=/" />
+    </head>
+    <body>
+		<h1 style="text-align: center;">Error: %s</h1>
+    </body>
+</html>`
+
+	w.WriteHeader(statuscode)
+	w.Write([]byte(fmt.Sprintf(content, msg)))
+}
+
+func postPatient(w http.ResponseWriter, r *http.Request) {
+	action := func() error {
+		return fmt.Errorf("asdjföjashöf")
 
 		patientDetails := PatientDetails{
 			ID:        r.FormValue("ID"),
@@ -116,47 +97,50 @@ func start() error {
 			Worklist:  r.FormValue("Worklist"),
 		}
 
-		// do something with details
-		_ = patientDetails
+		fmt.Printf("%+v\n", patientDetails)
 
-		tmpl.Execute(w, struct{ Success bool }{true})
+		return nil
 	}
 
-	mux := http.NewServeMux()
-
-	if *username != "" {
-		mux.HandleFunc("/", basicAuth(indexFunc))
-	} else {
-		mux.HandleFunc("/", indexFunc)
+	err := action()
+	if common.Error(err) {
+		notify(w, err.Error(), http.StatusBadRequest)
 	}
 
-	srv := &http.Server{
-		Addr:         fmt.Sprintf(":%d", *port),
-		Handler:      mux,
-		IdleTimeout:  time.Minute,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 30 * time.Second,
-	}
+	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
 
-	common.Info("starting server on %s", srv.Addr)
-
-	if *useTls {
-		err := srv.ListenAndServeTLS(*certFilename, *keyFilename)
-		if common.Error(err) {
-			return err
+func postOrder(w http.ResponseWriter, r *http.Request) {
+	action := func() error {
+		orderDetails := OrderDetails{
+			ID:              r.FormValue("ID"),
+			AccessionNumber: r.FormValue("AccessionNumber"),
+			StartDate:       r.FormValue("StartDate"),
+			EndDate:         r.FormValue("EndDate"),
+			Status:          r.FormValue("Status"),
 		}
-	} else {
-		err := srv.ListenAndServe()
-		if common.Error(err) {
-			return err
-		}
+
+		fmt.Printf("%+v\n", orderDetails)
+
+		return nil
 	}
 
-	return nil
+	err := action()
+	if common.Error(err) {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	}
+
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
 func basicAuth(next http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if *username == "" {
+			next.ServeHTTP(w, r)
+
+			return
+		}
+
 		u, p, ok := r.BasicAuth()
 		if ok {
 			usernameHash := sha256.Sum256([]byte(u))
@@ -180,6 +164,83 @@ func basicAuth(next http.HandlerFunc) http.HandlerFunc {
 		w.Header().Set("WWW-Authenticate", `Basic realm="restricted", charset="UTF-8"`)
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 	})
+}
+
+func start() error {
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("/", basicAuth(getIndex))
+	mux.HandleFunc("/patient", basicAuth(postPatient))
+	mux.HandleFunc("/order", basicAuth(postOrder))
+
+	var tlsConfig *tls.Config
+	var err error
+
+	if *useTls {
+		tlsConfig, err = common.NewTlsConfigFromFlags()
+		if common.Error(err) {
+			return err
+		}
+	}
+
+	go func() {
+		common.Info("Starting server on %d", *port)
+
+		srv = &http.Server{
+			Addr:         fmt.Sprintf(":%d", *port),
+			Handler:      mux,
+			IdleTimeout:  time.Minute,
+			ReadTimeout:  10 * time.Second,
+			WriteTimeout: 30 * time.Second,
+			TLSConfig:    tlsConfig,
+		}
+
+		srvDone = make(chan struct{})
+
+		if *useTls {
+			err = srv.ListenAndServeTLS("", "")
+		} else {
+			err = srv.ListenAndServe()
+		}
+
+		<-srvDone
+
+		if err == http.ErrServerClosed {
+			return
+		} else {
+			common.Error(err)
+		}
+	}()
+
+	time.Sleep(time.Second)
+
+	if common.Error(err) {
+		return err
+	}
+
+	return nil
+}
+
+func stop() error {
+	if srv == nil {
+		return nil
+	}
+
+	common.Info("Stoping server on %d", *port)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*1)
+	defer func() {
+		cancel()
+	}()
+
+	err := srv.Shutdown(ctx)
+	if common.Error(err) {
+		return err
+	}
+
+	close(srvDone)
+
+	return nil
 }
 
 func main() {
