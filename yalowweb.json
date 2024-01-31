@@ -1,8 +1,0 @@
-{
-  "applicationTitle": "hydra",
-  "applicationVersion": "1.0.0",
-  "flags": [
-    "service=simulate",
-    "log.verbose=true"
-  ]
-}
