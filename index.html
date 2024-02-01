@@ -24,25 +24,25 @@
                 <legend>Patient</legend>
 
                 <label for="ID" class="label">ID</label>
-                <input type="text" id="ID" name="ID" autofocus/><br>
+                <input type="text" id="ID" name="ID" autofocus required/><br>
 
                 <label for="LastName" class="label">LastName</label>
-                <input type="text" id="LastName" name="LastName"/><br>
+                <input type="text" id="LastName" name="LastName" required/><br>
 
                 <label for="FirstName" class="label">FirstName</label>
-                <input type="text" id="FirstName" name="FirstName"/><br>
+                <input type="text" id="FirstName" name="FirstName" required/><br>
 
                 <label for="BirthDate" class="label">BirthDate</label>
-                <input type="date" id="BirthDate" name="BirthDate"/><br>
+                <input type="date" id="BirthDate" name="BirthDate" required/><br>
 
                 <fieldset>
                     <legend>Sex</legend>
-                    <input type="radio" name="Sex" value="MALE" checked>Male</input><br>
-                    <input type="radio" name="Sex" value="FEMALE">Female</input><br>
-                    <input type="radio" name="Sex" value="">Undefined</input><br>
+                    <input type="radio" name="Sex" value="MALE" required>Male<br>
+                    <input type="radio" name="Sex" value="FEMALE">Female<br>
+                    <input type="radio" name="Sex" value="">Undefined<br>
                 </fieldset>
 
-                <input type="checkbox" id="Worklist" name="Worklist" value="true">Worklist</input><br>
+                <input type="checkbox" id="Worklist" name="Worklist" value="true">Worklist<br>
 
                 <input type="submit">
             </fieldset>
@@ -54,30 +54,30 @@
                 <legend>Order</legend>
 
                 <label for="ID" class="label">ID</label>
-                <input type="text" id="ID" name="ID"/><br>
+                <input type="text" id="ID" name="ID" required/><br>
 
                 <label for="AccessionNumber" class="label">AccessionNumber</label>
-                <input type="text" id="AccessionNumber" name="AccessionNumber"/><br>
+                <input type="text" id="AccessionNumber" name="AccessionNumber" required/><br>
 
                 <label for="StartDate" class="label">StartDate</label>
-                <input type="date" id="StartDate" name="StartDate"/><br>
+                <input type="date" id="StartDate" name="StartDate" required/><br>
 
                 <label for="EndDate" class="label">EndDate</label>
-                <input type="date" id="EndDate" name="EndDate"/><br>
+                <input type="date" id="EndDate" name="EndDate" required/><br>
 
                 <label for="Status" class="label">EndDate</label>
                 <fieldset id="Status" style="margin-bottom: 8px;">
                     <legend>Status</legend>
-                    <input type="radio" name="Status" value="PROPOSED" checked>Proposed</input><br>
-                    <input type="radio" name="Status" value="PENDING">Pending</input><br>
-                    <input type="radio" name="Status" value="BOOKED">Booked</input><br>
-                    <input type="radio" name="Status" value="ARRIVED">Arrived</input><br>
-                    <input type="radio" name="Status" value="FULFILLED">Fulfilled</input><br>
-                    <input type="radio" name="Status" value="CANCELLED">Cancelled</input><br>
-                    <input type="radio" name="Status" value="NOSHOW">Nowshow</input><br>
-                    <input type="radio" name="Status" value="ENTERED-IN-ERROR">Entered-in-error</input><br>
-                    <input type="radio" name="Status" value="CHECKED-IN">Checked-in</input><br>
-                    <input type="radio" name="Status" value="WAITLIST">Waitlist</input><br>
+                    <input type="radio" name="Status" value="PROPOSED" required>Proposed<br>
+                    <input type="radio" name="Status" value="PENDING">Pending<br>
+                    <input type="radio" name="Status" value="BOOKED">Booked<br>
+                    <input type="radio" name="Status" value="ARRIVED">Arrived<br>
+                    <input type="radio" name="Status" value="FULFILLED">Fulfilled<br>
+                    <input type="radio" name="Status" value="CANCELLED">Cancelled<br>
+                    <input type="radio" name="Status" value="NOSHOW">Nowshow<br>
+                    <input type="radio" name="Status" value="ENTERED-IN-ERROR">Entered-in-error<br>
+                    <input type="radio" name="Status" value="CHECKED-IN">Checked-in<br>
+                    <input type="radio" name="Status" value="WAITLIST">Waitlist<br>
                 </fieldset>
 
                 <input type="submit">
