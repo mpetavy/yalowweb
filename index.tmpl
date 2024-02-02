@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <head xmlns="http://www.w3.org/1999/html">
-    <title>{{ .Title }}</title>
+    {{if or .Success .Failure}}
+    <meta http-equiv="refresh" content="2;url=/" />
+    {{end}}
+    <title>{{.Title}}</title>
     <style>
         .label {
             display: inline-flex;
@@ -18,10 +21,10 @@
 <body>
 <div style="width: 750px; margin: auto;">
     <br>
-    <h1 style="text-align:center">{{ .Title }}</h1>
-    <h3 style="text-align:center">GIT: {{ .GIT }}</h3>
+    <h1 style="text-align:center">{{.Title}}</h1>
+    <h3 style="text-align:center">GIT: {{.GIT}}</h3>
     <br>
-    <br>
+    {{if .Success}} <h2 style="color: White; background-color: MediumSeaGreen; text-align:center">{{.Msg}}</h3> {{else}} {{if .Failure}} <h2 style="color: White; background-color: Crimson; text-align:center">{{.Statuscode}} {{.Msg}}</h3>{{end}}{{end}}
     <div style="float: left;">
         <form method="POST" action="/patient">
             <fieldset>
@@ -68,10 +71,10 @@
                 <input type="text" id="AccessionNumber" name="AccessionNumber" required/><br>
 
                 <label for="StartDate" class="label">StartDate</label>
-                <input type="date" id="StartDate" name="StartDate" value="{{ .CurrentDate }}" required/><br>
+                <input type="date" id="StartDate" name="StartDate" value="{{.CurrentDate}}" required/><br>
 
                 <label for="EndDate" class="label">EndDate</label>
-                <input type="date" id="EndDate" name="EndDate" value="{{ .CurrentDate }}" required/><br>
+                <input type="date" id="EndDate" name="EndDate" value="{{.CurrentDate}}" required/><br>
 
                 <fieldset id="Status" style="margin-bottom: 8px;">
                     <legend>Status</legend>

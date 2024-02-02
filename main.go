@@ -51,6 +51,10 @@ type Form struct {
 	CurrentDate string
 	Patient     PatientForm
 	Order       OrderForm
+	Success     bool
+	Failure     bool
+	Msg         string
+	Statuscode  string
 }
 
 type Identifier struct {
@@ -129,7 +133,7 @@ var (
 	indexTmpl []byte
 	srv       *http.Server
 	srvDone   chan struct{}
-	form      Form
+	form      *Form
 )
 
 //go:embed go.mod
@@ -243,27 +247,37 @@ func executeHttpRequest(method string, headers http.Header, username string, pas
 }
 
 func getHome(w http.ResponseWriter, r *http.Request) {
+	defer func() {
+		form.Success = false
+		form.Failure = false
+		form.Msg = ""
+	}()
+
 	common.DebugFunc()
 
 	action := func() error {
 		var err error
+		var tmpl *template.Template
 
-		tmpl := template.New(INDEX_TMPL)
-		tmpl, err = tmpl.Parse(string(indexTmpl))
-		if common.Error(err) {
-			return err
+		if common.IsRunningAsExecutable() {
+			tmpl = template.New(INDEX_TMPL)
+			tmpl, err = tmpl.Parse(string(indexTmpl))
+			if common.Error(err) {
+				return err
+			}
+		} else {
+			tmpl, err = template.ParseFiles(INDEX_TMPL)
+			if common.Error(err) {
+				return err
+			}
 		}
 
 		today := time.Now().Format(time.RFC3339)
 		today = today[:strings.Index(today, "T")]
 
-		form := &Form{
-			Title:       strings.ToUpper(common.TitleVersion(true, true, true)),
-			GIT:         common.App().Git,
-			CurrentDate: today,
-			Patient:     PatientForm{},
-			Order:       OrderForm{},
-		}
+		form.CurrentDate = today
+		form.Patient = PatientForm{}
+		form.Order = OrderForm{}
 
 		err = tmpl.Execute(w, form)
 		if common.Error(err) {
@@ -275,30 +289,24 @@ func getHome(w http.ResponseWriter, r *http.Request) {
 
 	err := action()
 	if common.Error(err) {
-		notify(w, err.Error(), http.StatusBadRequest)
+		notify(w, r, err.Error(), http.StatusBadRequest)
 	}
 }
 
-func notify(w http.ResponseWriter, msg string, statuscode int) {
+func notify(w http.ResponseWriter, r *http.Request, msg string, statuscode int) {
 	common.DebugFunc()
 
-	content := `
-<html>
-    <head>
-        <meta http-equiv="refresh" content="2;url=/" />
-    </head>
-    <body>
-		<h1 style="color: %s text-align: center;">Error %d '%s': %s</h1>
-    </body>
-</html>`
-
-	color := "Crimson"
-	if statuscode > 99 && statuscode/100 == 2 {
-		color = "Green"
+	form.Msg = msg
+	form.Statuscode = strconv.Itoa(statuscode)
+	if statuscode == http.StatusOK {
+		form.Success = true
+	} else {
+		form.Failure = true
 	}
 
-	w.WriteHeader(statuscode)
-	w.Write([]byte(fmt.Sprintf(content, color, statuscode, http.StatusText(statuscode), msg)))
+	r.Method = http.MethodGet
+
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
 func postPatient(w http.ResponseWriter, r *http.Request) {
@@ -384,14 +392,10 @@ func postPatient(w http.ResponseWriter, r *http.Request) {
 			statuscode = resp.StatusCode
 		}
 
-		notify(w, err.Error(), statuscode)
+		notify(w, r, err.Error(), statuscode)
+	} else {
+		notify(w, r, "", http.StatusOK)
 	}
-
-	common.Error(common.Clear(&form))
-
-	r.Method = http.MethodGet
-
-	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
 func postOrder(w http.ResponseWriter, r *http.Request) {
@@ -468,14 +472,10 @@ func postOrder(w http.ResponseWriter, r *http.Request) {
 			statuscode = resp.StatusCode
 		}
 
-		notify(w, err.Error(), statuscode)
+		notify(w, r, err.Error(), statuscode)
+	} else {
+		notify(w, r, "", http.StatusOK)
 	}
-
-	common.Error(common.Clear(&form))
-
-	r.Method = http.MethodGet
-
-	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
 func basicAuth(next http.HandlerFunc) http.HandlerFunc {
@@ -533,6 +533,11 @@ func start() error {
 	indexTmpl, _, err = common.ReadResource(INDEX_TMPL)
 	if common.Error(err) {
 		return err
+	}
+
+	form = &Form{
+		Title: strings.ToUpper(common.TitleVersion(true, true, true)),
+		GIT:   common.App().Git,
 	}
 
 	mux := http.NewServeMux()
