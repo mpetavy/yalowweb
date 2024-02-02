@@ -22,7 +22,6 @@
 <div style="width: 750px; margin: auto;">
     <br>
     <h1 style="text-align:center">{{.Title}}</h1>
-    <h3 style="text-align:center">GIT: {{.GIT}}</h3>
     <br>
     {{if .Success}} <h2 style="color: White; background-color: MediumSeaGreen; text-align:center">{{.Msg}}</h3> {{else}} {{if .Failure}} <h2 style="color: White; background-color: Crimson; text-align:center">{{.Statuscode}} {{.Msg}}</h3>{{end}}{{end}}
     <div style="float: left;">

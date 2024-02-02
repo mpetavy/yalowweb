@@ -313,6 +313,8 @@ func postPatient(w http.ResponseWriter, r *http.Request) {
 	common.DebugFunc()
 
 	action := func() (*http.Response, error) {
+		return &http.Response{StatusCode: http.StatusOK}, nil
+
 		form.Patient = PatientForm{
 			ID:        r.FormValue("ID"),
 			LastName:  r.FormValue("LastName"),
@@ -394,7 +396,7 @@ func postPatient(w http.ResponseWriter, r *http.Request) {
 
 		notify(w, r, err.Error(), statuscode)
 	} else {
-		notify(w, r, "", http.StatusOK)
+		notify(w, r, "Erfolg", http.StatusOK)
 	}
 }
 
@@ -474,7 +476,7 @@ func postOrder(w http.ResponseWriter, r *http.Request) {
 
 		notify(w, r, err.Error(), statuscode)
 	} else {
-		notify(w, r, "", http.StatusOK)
+		notify(w, r, "Erfolg", http.StatusOK)
 	}
 }
 
