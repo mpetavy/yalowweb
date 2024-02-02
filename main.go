@@ -396,7 +396,7 @@ func postPatient(w http.ResponseWriter, r *http.Request) {
 
 		notify(w, r, err.Error(), statuscode)
 	} else {
-		notify(w, r, "Erfolg", http.StatusOK)
+		notify(w, r, "Success!", http.StatusOK)
 	}
 }
 
@@ -476,7 +476,7 @@ func postOrder(w http.ResponseWriter, r *http.Request) {
 
 		notify(w, r, err.Error(), statuscode)
 	} else {
-		notify(w, r, "Erfolg", http.StatusOK)
+		notify(w, r, "Success!", http.StatusOK)
 	}
 }
 
