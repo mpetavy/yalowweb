@@ -7,15 +7,51 @@ import (
 	"crypto/subtle"
 	"crypto/tls"
 	"embed"
+	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/mpetavy/common"
 	"html/template"
 	"io"
 	"net/http"
+	"net/http/httputil"
+	"os"
+	"strconv"
 	"strings"
 	"time"
 )
+
+const (
+	YALOWWEB_INI = "yalowweb.ini"
+	INDEX_TMPL   = "index.tmpl"
+)
+
+type PatientForm struct {
+	ID        string
+	LastName  string
+	FirstName string
+	BirthDate string
+	Sex       string
+	Worklist  string
+}
+
+type OrderForm struct {
+	Kind            string
+	ID              string
+	AccessionNumber string
+	StartDate       string
+	EndDate         string
+	Status          string
+}
+
+type Form struct {
+	Title       string
+	GIT         string
+	CurrentDate string
+	Patient     PatientForm
+	Order       OrderForm
+}
 
 type Identifier struct {
 	Value string `json:"value,omitempty"`
@@ -27,7 +63,7 @@ type HealthInsurance struct {
 	SubscriberId string `json:"subscriberId,omitempty"`
 }
 
-type PatientPayload struct {
+type Patient struct {
 	Id                       string          `json:"id,omitempty"`
 	Mrn                      string          `json:"mrn,omitempty"`
 	MrnAssigner              string          `json:"mrnAssigner,omitempty"`
@@ -52,6 +88,12 @@ type PatientPayload struct {
 	Zip                      string          `json:"zip,omitempty"`
 }
 
+type PatientPayload struct {
+	DryRun             bool    `json:"dryRun"`
+	CreateWorklistItem bool    `json:"createWorklistItem"`
+	Patient            Patient `json:"patient"`
+}
+
 type Appointment struct {
 	EmrId           string `json:"emrId,omitempty"`
 	Date            string `json:"date,omitempty"`
@@ -71,32 +113,75 @@ type OrderPayload struct {
 }
 
 var (
-	port        = flag.Int("port", 8443, "port to serve the directory")
-	username    = flag.String("username", "", "username")
-	password    = flag.String("password", "", "password")
-	httpTimeout = flag.Int("httpTimeout", 10000, "http request timeout")
-	useTls      = flag.Bool("tls", false, "use TLS")
-	baseUrl     = flag.String("baseUrl", "", "baseUrl")     // https://ew1.veracitydoc.com/api/emr-integration/api-docs
-	kid         = flag.String("kid", "", "kid")             // postman:dev:a
-	tenant      = flag.String("tenant", "", "tenant")       // emr-yala
-	sub         = flag.String("sub", "", "sub")             // EMR Web Simulator
-	cLocation   = flag.String("cLocation", "", "cLocation") // location1
-	provider    = flag.String("provider", "", "provider")   // provider1
-	secret      = flag.String("secret", "", "secret")       // postman-dev-a.private.pem (in diesem Beispiel der Name der Datei)
+	port      = flag.Int("port", 8443, "port to serve the directory")
+	username  = flag.String("username", "", "username")
+	password  = flag.String("password", "", "password")
+	timeout   = flag.Int("timeout", 10000, "http request timeout")
+	useTls    = flag.Bool("tls", false, "use TLS")
+	baseUrl   = flag.String("baseUrl", "", "baseUrl")     // https://ew1.veracitydoc.com/api/emr-integration/api-docs
+	kid       = flag.String("kid", "", "kid")             // postman:dev:a
+	tenant    = flag.String("tenant", "", "tenant")       // emr-yala
+	sub       = flag.String("sub", "", "sub")             // EMR Web Simulator
+	cLocation = flag.String("cLocation", "", "cLocation") // location1
+	provider  = flag.String("provider", "", "provider")   // provider1
+	secret    = flag.String("secret", "", "secret")       // postman-dev-a.private.pem (in diesem Beispiel der Name der Datei)
 
-	srv     *http.Server
-	srvDone chan struct{}
+	indexTmpl []byte
+	srv       *http.Server
+	srvDone   chan struct{}
+	form      Form
 )
 
 //go:embed go.mod
+//go:embed index.tmpl
+//go:embed yalowweb.ini
 var resources embed.FS
 
 func init() {
-	common.Init("", "", "", "", "", "", "", "", &resources, start, stop, nil, 0)
+	common.Init("", "1.0.0", "", "", "", "", "", "", &resources, start, stop, nil, 0)
 }
 
-func executeHttpRequest(method string, headers map[string]string, username string, password string, address string, body io.Reader, expectedCode int) (*http.Response, []byte, error) {
+func createJWT(content interface{}) (string, error) {
+	common.DebugFunc()
+
+	key, err := jwt.ParseRSAPrivateKeyFromPEM([]byte(*secret))
+	if common.Error(err) {
+		return "", err
+	}
+
+	now := time.Now().UTC()
+
+	claims := make(jwt.MapClaims)
+	if content != nil {
+		claims["dat"] = content
+	}
+	claims["sub"] = *sub
+	claims["tenant"] = *tenant
+	claims["exp"] = now.Add(time.Hour * 24).Unix() // The expiration time after which the token must be disregarded.
+
+	j := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
+	j.Header["kid"] = *kid
+
+	token, err := j.SignedString(key)
+	if common.Error(err) {
+		return "", err
+	}
+
+	common.DebugFunc(token)
+
+	return token, nil
+}
+
+func executeHttpRequest(method string, headers http.Header, username string, password string, address string, body *bytes.Buffer, expectedCode int) (*http.Response, []byte, error) {
 	common.DebugFunc("Method: %s URL: %s Username: %s Password: %s", method, address, username, strings.Repeat("X", len(password)))
+
+	if headers == nil {
+		headers = make(http.Header)
+	}
+
+	if body != nil {
+		headers.Set("Content-Length", strconv.Itoa(body.Len()))
+	}
 
 	client := &http.Client{
 		Transport: &http.Transport{
@@ -104,9 +189,10 @@ func executeHttpRequest(method string, headers map[string]string, username strin
 				InsecureSkipVerify: true,
 			},
 		},
+		Timeout: common.MillisecondToDuration(*timeout),
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), common.MillisecondToDuration(*httpTimeout))
+	ctx, cancel := context.WithTimeout(context.Background(), common.MillisecondToDuration(*timeout))
 	defer cancel()
 
 	req, err := http.NewRequest(method, address, body)
@@ -123,111 +209,66 @@ func executeHttpRequest(method string, headers map[string]string, username strin
 	}
 
 	if headers != nil {
-		for key, value := range headers {
-			req.Header.Set(key, value)
-		}
+		req.Header = headers
 	}
+
+	ba, err := httputil.DumpRequest(req, true)
+	if common.Error(err) {
+		return nil, nil, err
+	}
+
+	common.DebugFunc("Dump request: %s", string(ba))
 
 	resp, err := client.Do(req.WithContext(ctx))
 	if common.Error(err) {
 		return nil, nil, err
 	}
 
-	if expectedCode > 0 && resp.StatusCode != expectedCode {
-		return nil, nil, fmt.Errorf("unexpected HTTP staus code, expected %d got %d", expectedCode, resp.StatusCode)
-	}
-
 	buf := bytes.Buffer{}
 
-	if err == nil {
-		defer func() {
-			common.DebugError(resp.Body.Close())
-		}()
+	defer func() {
+		common.DebugError(resp.Body.Close())
+	}()
 
-		_, err = io.Copy(&buf, resp.Body)
+	_, err = io.Copy(&buf, resp.Body)
+
+	common.DebugFunc("Response statuscode: %d", resp.StatusCode)
+	common.DebugFunc("Response body: %s", string(buf.Bytes()))
+
+	if expectedCode > 0 && resp.StatusCode != expectedCode {
+		return resp, buf.Bytes(), fmt.Errorf("unexpected HTTP staus code, expected %d got %d", expectedCode, resp.StatusCode)
 	}
 
-	return resp, buf.Bytes(), err
+	return resp, buf.Bytes(), nil
 }
 
 func getHome(w http.ResponseWriter, r *http.Request) {
+	common.DebugFunc()
+
 	action := func() error {
-		tmpl, err := template.ParseFiles("index.html")
+		var err error
+
+		tmpl := template.New(INDEX_TMPL)
+		tmpl, err = tmpl.Parse(string(indexTmpl))
 		if common.Error(err) {
 			return err
 		}
 
-		err = tmpl.Execute(w, nil)
+		today := time.Now().Format(time.RFC3339)
+		today = today[:strings.Index(today, "T")]
+
+		form := &Form{
+			Title:       strings.ToUpper(common.TitleVersion(true, true, true)),
+			GIT:         common.App().Git,
+			CurrentDate: today,
+			Patient:     PatientForm{},
+			Order:       OrderForm{},
+		}
+
+		err = tmpl.Execute(w, form)
 		if common.Error(err) {
 			return err
 		}
-
-		return nil
-	}
-
-	err := action()
-	if common.Error(err) {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-	}
-}
-
-func notify(w http.ResponseWriter, msg string, statuscode int) {
-	content := `
-<html>
-    <head>
-        <meta http-equiv="refresh" content="2;url=/" />
-    </head>
-    <body>
-		<h1 style="text-align: center;">Error: %s</h1>
-    </body>
-</html>`
-
-	w.WriteHeader(statuscode)
-	w.Write([]byte(fmt.Sprintf(content, msg)))
-}
-
-func postPatient(w http.ResponseWriter, r *http.Request) {
-	action := func() error {
-		//patientDetails := PatientDetails{
-		//	ID:        r.FormValue("ID"),
-		//	LastName:  r.FormValue("LastName"),
-		//	FirstName: r.FormValue("FirstName"),
-		//	BirthDate: r.FormValue("BirthDate"),
-		//	Sex:       r.FormValue("Sex"),
-		//	Worklist:  r.FormValue("Worklist"),
-		//}
-
-		birthdate, err := time.Parse(time.DateOnly, r.FormValue("BirthDate"))
-		if common.Error(err) {
-			return err
-		}
-
-		patientPayload := PatientPayload{
-			Id:                       r.FormValue("ID"),
-			Mrn:                      "",
-			MrnAssigner:              "",
-			Identifier:               nil,
-			HealthInsurance:          HealthInsurance{},
-			LastName:                 r.FormValue("LastName"),
-			FirstName:                r.FormValue("FirstName"),
-			DateOfBirth:              birthdate.Format(time.RFC3339),
-			Gender:                   r.FormValue("Sex"),
-			Ethnicity:                "",
-			AddressLine1:             "",
-			AddressLine2:             "",
-			City:                     "",
-			EmailAddress:             "",
-			PhoneHome:                "",
-			PhoneMobile:              "",
-			PhoneWork:                "",
-			PreferredMethodOfContact: "",
-			Race:                     "",
-			State:                    "",
-			Country:                  "",
-			Zip:                      "",
-		}
-
-		fmt.Printf("%+v\n", patientPayload)
 
 		return nil
 	}
@@ -236,60 +277,210 @@ func postPatient(w http.ResponseWriter, r *http.Request) {
 	if common.Error(err) {
 		notify(w, err.Error(), http.StatusBadRequest)
 	}
+}
+
+func notify(w http.ResponseWriter, msg string, statuscode int) {
+	common.DebugFunc()
+
+	content := `
+<html>
+    <head>
+        <meta http-equiv="refresh" content="2;url=/" />
+    </head>
+    <body>
+		<h1 style="color: %s text-align: center;">Error %d '%s': %s</h1>
+    </body>
+</html>`
+
+	color := "Crimson"
+	if statuscode > 99 && statuscode/100 == 2 {
+		color = "Green"
+	}
+
+	w.WriteHeader(statuscode)
+	w.Write([]byte(fmt.Sprintf(content, color, statuscode, http.StatusText(statuscode), msg)))
+}
+
+func postPatient(w http.ResponseWriter, r *http.Request) {
+	common.DebugFunc()
+
+	action := func() (*http.Response, error) {
+		form.Patient = PatientForm{
+			ID:        r.FormValue("ID"),
+			LastName:  r.FormValue("LastName"),
+			FirstName: r.FormValue("FirstName"),
+			BirthDate: r.FormValue("BirthDate"),
+			Sex:       r.FormValue("Sex"),
+			Worklist:  r.FormValue("Worklist"),
+		}
+
+		common.Debug("patientForm: %+v\n", form.Patient)
+
+		birthdate, err := time.Parse(time.DateOnly, r.FormValue("BirthDate"))
+		if common.Error(err) {
+			return nil, err
+		}
+
+		patientPayload := PatientPayload{
+			DryRun:             false,
+			CreateWorklistItem: common.ToBool(r.FormValue("Worklist")),
+			Patient: Patient{
+				Id:          form.Patient.ID,
+				Mrn:         form.Patient.ID,
+				MrnAssigner: "MED",
+				Identifier: []Identifier{Identifier{
+					Value: form.Patient.ID,
+					Type:  "EMR",
+				}},
+				HealthInsurance: HealthInsurance{
+					Type:         "MED",
+					SubscriberId: "M-" + form.Patient.ID,
+				},
+				LastName:                 form.Patient.LastName,
+				FirstName:                form.Patient.FirstName,
+				DateOfBirth:              birthdate.Format(time.RFC3339),
+				Gender:                   form.Patient.Sex,
+				Ethnicity:                "",
+				AddressLine1:             "",
+				AddressLine2:             "",
+				City:                     "",
+				EmailAddress:             "",
+				PhoneHome:                "",
+				PhoneMobile:              "",
+				PhoneWork:                "",
+				PreferredMethodOfContact: "",
+				Race:                     "",
+				State:                    "",
+				Country:                  "",
+				Zip:                      "",
+			},
+		}
+
+		payload, err := json.MarshalIndent(&patientPayload, "", "    ")
+		if common.Error(err) {
+			return nil, err
+		}
+
+		common.Debug("patientPayload: %+v\n", string(payload))
+
+		token, err := createJWT(nil)
+		if common.Error(err) {
+			return nil, err
+		}
+
+		headers := make(http.Header)
+		headers.Set("x-veracity-token", token)
+		headers.Set("Content-Type", common.MimetypeApplicationJson.MimeType)
+
+		resp, _, err := executeHttpRequest(http.MethodPost, headers, "", "", *baseUrl+"/v1/sendPatient", bytes.NewBuffer(payload), http.StatusOK)
+
+		return resp, err
+	}
+
+	resp, err := action()
+	if common.Error(err) {
+		statuscode := http.StatusBadRequest
+		if resp != nil {
+			statuscode = resp.StatusCode
+		}
+
+		notify(w, err.Error(), statuscode)
+	}
+
+	common.Error(common.Clear(&form))
+
+	r.Method = http.MethodGet
 
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
 func postOrder(w http.ResponseWriter, r *http.Request) {
-	action := func() error {
-		//orderDetails := OrderDetails{
-		//	ID:              r.FormValue("ID"),
-		//	AccessionNumber: r.FormValue("AccessionNumber"),
-		//	StartDate:       r.FormValue("StartDate"),
-		//	EndDate:         r.FormValue("EndDate"),
-		//	Status:          r.FormValue("Status"),
-		//}
+	common.DebugFunc()
 
-		startDate, err := time.Parse(time.DateOnly, r.FormValue("StartDate"))
-		if common.Error(err) {
-			return err
+	action := func() (*http.Response, error) {
+		form.Order = OrderForm{
+			Kind:            r.FormValue("Kind"),
+			ID:              r.FormValue("ID"),
+			AccessionNumber: r.FormValue("AccessionNumber"),
+			StartDate:       r.FormValue("StartDate"),
+			EndDate:         r.FormValue("EndDate"),
+			Status:          r.FormValue("Status"),
 		}
 
-		endDate, err := time.Parse(time.DateOnly, r.FormValue("EndDate"))
+		common.Debug("form.Order: %+v\n", form.Order)
+
+		startDate, err := time.Parse(time.DateOnly, form.Order.StartDate)
 		if common.Error(err) {
-			return err
+			return nil, err
+		}
+
+		endDate, err := time.Parse(time.DateOnly, form.Order.EndDate)
+		if common.Error(err) {
+			return nil, err
+		}
+
+		deviceGroupId := ""
+		if form.Order.Kind == "ORDER" {
+			deviceGroupId = "ALL"
 		}
 
 		orderPayload := OrderPayload{
-			PatientId: "",
+			PatientId: form.Order.ID,
 			Appointments: []Appointment{Appointment{
-				EmrId:           "",
-				Date:            startDate.Format(time.RFC3339),
-				EndDate:         endDate.Format(time.RFC3339),
+				EmrId:           form.Order.AccessionNumber,
+				Date:            startDate.Format(time.RFC3339Nano),
+				EndDate:         endDate.Format(time.RFC3339Nano),
 				FacilityId:      "",
 				ProviderId:      "",
-				Status:          r.FormValue("Status"),
-				Type:            "",
-				DeviceGroupId:   "",
-				AccessionNumber: "",
-				OrderNumber:     "",
+				Status:          form.Order.Status,
+				Type:            "Established",
+				DeviceGroupId:   deviceGroupId,
+				AccessionNumber: form.Order.AccessionNumber,
+				OrderNumber:     form.Order.AccessionNumber,
 			}},
 		}
 
-		fmt.Printf("%+v\n", orderPayload)
+		payload, err := json.MarshalIndent(&orderPayload, "", "    ")
+		if common.Error(err) {
+			return nil, err
+		}
 
-		return nil
+		common.Debug("orderPayload: %+v\n", string(payload))
+
+		token, err := createJWT(nil)
+		if common.Error(err) {
+			return nil, err
+		}
+
+		headers := make(http.Header)
+		headers.Set("x-veracity-token", token)
+		headers.Set("Content-Type", common.MimetypeApplicationJson.MimeType)
+
+		resp, _, err := executeHttpRequest(http.MethodPost, headers, "", "", *baseUrl+"/v1/sendAppointments", bytes.NewBuffer(payload), http.StatusOK)
+
+		return resp, err
 	}
 
-	err := action()
+	resp, err := action()
 	if common.Error(err) {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		statuscode := http.StatusBadRequest
+		if resp != nil {
+			statuscode = resp.StatusCode
+		}
+
+		notify(w, err.Error(), statuscode)
 	}
+
+	common.Error(common.Clear(&form))
+
+	r.Method = http.MethodGet
 
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
 func basicAuth(next http.HandlerFunc) http.HandlerFunc {
+	common.DebugFunc()
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if *username == "" {
 			next.ServeHTTP(w, r)
@@ -323,6 +514,27 @@ func basicAuth(next http.HandlerFunc) http.HandlerFunc {
 }
 
 func start() error {
+	common.DebugFunc()
+
+	files := []string{YALOWWEB_INI}
+	for _, file := range files {
+		if !common.FileExists(file) {
+			ba, _, err := common.ReadResource(file)
+			if common.Error(err) {
+				return err
+			}
+
+			common.WarnError(os.WriteFile(file, ba, os.ModePerm))
+		}
+	}
+
+	var err error
+
+	indexTmpl, _, err = common.ReadResource(INDEX_TMPL)
+	if common.Error(err) {
+		return err
+	}
+
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/", basicAuth(getHome))
@@ -330,7 +542,6 @@ func start() error {
 	mux.HandleFunc("/order", basicAuth(postOrder))
 
 	var tlsConfig *tls.Config
-	var err error
 
 	if *useTls {
 		tlsConfig, err = common.NewTlsConfigFromFlags()
@@ -345,9 +556,9 @@ func start() error {
 		srv = &http.Server{
 			Addr:         fmt.Sprintf(":%d", *port),
 			Handler:      mux,
-			IdleTimeout:  common.MillisecondToDuration(*httpTimeout),
-			ReadTimeout:  common.MillisecondToDuration(*httpTimeout),
-			WriteTimeout: common.MillisecondToDuration(*httpTimeout),
+			IdleTimeout:  common.MillisecondToDuration(*timeout),
+			ReadTimeout:  common.MillisecondToDuration(*timeout),
+			WriteTimeout: common.MillisecondToDuration(*timeout),
 			TLSConfig:    tlsConfig,
 		}
 
@@ -378,6 +589,8 @@ func start() error {
 }
 
 func stop() error {
+	common.DebugFunc()
+
 	if srv == nil {
 		return nil
 	}

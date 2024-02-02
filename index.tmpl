@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <head xmlns="http://www.w3.org/1999/html">
-    <title>YALOWWEB</title>
+    <title>{{ .Title }}</title>
     <style>
         .label {
             display: inline-flex;
@@ -16,8 +16,12 @@
     </style>
 </head>
 <body>
-<div style="width: 800px; margin: auto;">
-    <h1 style="text-align:center">YALOWWEB</h1>
+<div style="width: 750px; margin: auto;">
+    <br>
+    <h1 style="text-align:center">{{ .Title }}</h1>
+    <h3 style="text-align:center">GIT: {{ .GIT }}</h3>
+    <br>
+    <br>
     <div style="float: left;">
         <form method="POST" action="/patient">
             <fieldset>
@@ -37,12 +41,12 @@
 
                 <fieldset>
                     <legend>Sex</legend>
+                    <input type="radio" name="Sex" value="FEMALE" checked>Female<br>
                     <input type="radio" name="Sex" value="MALE" required>Male<br>
-                    <input type="radio" name="Sex" value="FEMALE">Female<br>
                     <input type="radio" name="Sex" value="">Undefined<br>
                 </fieldset>
 
-                <input type="checkbox" id="Worklist" name="Worklist" value="true">Worklist<br>
+                <input type="checkbox" id="Worklist" name="Worklist" value="true" checked>Worklist<br>
 
                 <input type="submit">
             </fieldset>
@@ -51,7 +55,11 @@
     <div style="float: right;">
         <form method="POST" action="/order">
             <fieldset>
-                <legend>Order</legend>
+                <legend>Appointment/Order</legend>
+                <fieldset id="Kind" style="margin-bottom: 8px;">
+                    <input type="radio" name="Kind" value="APPOINTMENT" required checked>Appointment<br>
+                    <input type="radio" name="Kind" value="ORDER">Order<br>
+                </fieldset>
 
                 <label for="ID" class="label">ID</label>
                 <input type="text" id="ID" name="ID" required/><br>
@@ -60,24 +68,23 @@
                 <input type="text" id="AccessionNumber" name="AccessionNumber" required/><br>
 
                 <label for="StartDate" class="label">StartDate</label>
-                <input type="date" id="StartDate" name="StartDate" required/><br>
+                <input type="date" id="StartDate" name="StartDate" value="{{ .CurrentDate }}" required/><br>
 
                 <label for="EndDate" class="label">EndDate</label>
-                <input type="date" id="EndDate" name="EndDate" required/><br>
+                <input type="date" id="EndDate" name="EndDate" value="{{ .CurrentDate }}" required/><br>
 
-                <label for="Status" class="label">EndDate</label>
                 <fieldset id="Status" style="margin-bottom: 8px;">
                     <legend>Status</legend>
-                    <input type="radio" name="Status" value="PROPOSED" required>Proposed<br>
-                    <input type="radio" name="Status" value="PENDING">Pending<br>
-                    <input type="radio" name="Status" value="BOOKED">Booked<br>
-                    <input type="radio" name="Status" value="ARRIVED">Arrived<br>
-                    <input type="radio" name="Status" value="FULFILLED">Fulfilled<br>
-                    <input type="radio" name="Status" value="CANCELLED">Cancelled<br>
-                    <input type="radio" name="Status" value="NOSHOW">Nowshow<br>
-                    <input type="radio" name="Status" value="ENTERED-IN-ERROR">Entered-in-error<br>
-                    <input type="radio" name="Status" value="CHECKED-IN">Checked-in<br>
-                    <input type="radio" name="Status" value="WAITLIST">Waitlist<br>
+                    <input type="radio" name="Status" value="proposed" required>Proposed<br>
+                    <input type="radio" name="Status" value="pending">Pending<br>
+                    <input type="radio" name="Status" value="booked" checked>Booked<br>
+                    <input type="radio" name="Status" value="arrived">Arrived<br>
+                    <input type="radio" name="Status" value="fulfilled">Fulfilled<br>
+                    <input type="radio" name="Status" value="cancelled">Cancelled<br>
+                    <input type="radio" name="Status" value="noshow">Nowshow<br>
+                    <input type="radio" name="Status" value="entered-in-error">Entered-in-error<br>
+                    <input type="radio" name="Status" value="checked-in">Checked-in<br>
+                    <input type="radio" name="Status" value="waitlist">Waitlist<br>
                 </fieldset>
 
                 <input type="submit">
