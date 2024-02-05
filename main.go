@@ -7,6 +7,7 @@ import (
 	"crypto/subtle"
 	"crypto/tls"
 	"embed"
+	"encoding/base64"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -46,6 +47,7 @@ type OrderForm struct {
 }
 
 type Form struct {
+	Logo        string
 	Title       string
 	GIT         string
 	CurrentDate string
@@ -139,6 +141,7 @@ var (
 //go:embed go.mod
 //go:embed index.tmpl
 //go:embed yalowweb.ini
+//go:embed logo.png
 var resources embed.FS
 
 func init() {
@@ -313,8 +316,6 @@ func postPatient(w http.ResponseWriter, r *http.Request) {
 	common.DebugFunc()
 
 	action := func() (*http.Response, error) {
-		return &http.Response{StatusCode: http.StatusOK}, nil
-
 		form.Patient = PatientForm{
 			ID:        r.FormValue("ID"),
 			LastName:  r.FormValue("LastName"),
@@ -537,8 +538,14 @@ func start() error {
 		return err
 	}
 
+	logo, err := resources.ReadFile("logo.png")
+	if common.Error(err) {
+		return err
+	}
+
 	form = &Form{
-		Title: strings.ToUpper(common.TitleVersion(true, true, true)),
+		Logo:  base64.StdEncoding.EncodeToString(logo),
+		Title: fmt.Sprintf("EMR Simulator %s", common.Version(true, true, true)),
 		GIT:   common.App().Git,
 	}
 
