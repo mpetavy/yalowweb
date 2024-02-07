@@ -49,6 +49,7 @@ type OrderForm struct {
 type Form struct {
 	Logo        string
 	Title       string
+	Tenant      string
 	GIT         string
 	CurrentDate string
 	Patient     PatientForm
@@ -544,9 +545,10 @@ func start() error {
 	}
 
 	form = &Form{
-		Logo:  base64.StdEncoding.EncodeToString(logo),
-		Title: fmt.Sprintf("EMR Simulator %s", common.Version(true, true, true)),
-		GIT:   common.App().Git,
+		Logo:   base64.StdEncoding.EncodeToString(logo),
+		Title:  fmt.Sprintf("EMR Simulator %s", common.Version(true, true, true)),
+		Tenant: *tenant,
+		GIT:    common.App().Git,
 	}
 
 	mux := http.NewServeMux()
