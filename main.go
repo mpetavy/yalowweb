@@ -49,6 +49,8 @@ type OrderForm struct {
 type Form struct {
 	Logo        string
 	Title       string
+	Kid         string
+	Sub         string
 	Tenant      string
 	GIT         string
 	CurrentDate string
@@ -146,7 +148,7 @@ var (
 var resources embed.FS
 
 func init() {
-	common.Init("", "1.1.0", "", "", "", "", "", "", &resources, start, stop, nil, 0)
+	common.Init("", "1.1.1", "", "", "", "", "", "", &resources, start, stop, nil, 0)
 }
 
 func createJWT(content interface{}) (string, error) {
@@ -548,6 +550,8 @@ func start() error {
 		Logo:   base64.StdEncoding.EncodeToString(logo),
 		Title:  fmt.Sprintf("EMR Simulator %s", common.Version(true, true, true)),
 		Tenant: *tenant,
+		Kid:    *kid,
+		Sub:    *sub,
 		GIT:    common.App().Git,
 	}
 
