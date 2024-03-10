@@ -4,7 +4,7 @@ go 1.21.4
 
 require (
 	github.com/golang-jwt/jwt/v5 v5.2.0
-	github.com/mpetavy/common v1.7.4
+	github.com/mpetavy/common v1.7.5
 )
 
 require (
@@ -63,4 +63,4 @@ require (
 	software.sslmate.com/src/go-pkcs12 v0.2.0 // indirect
 )
 
-replace github.com/mpetavy/common => ../common
+//replace github.com/mpetavy/common => ../common
