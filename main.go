@@ -160,7 +160,7 @@ var (
 var resources embed.FS
 
 func init() {
-	common.Init("", "1.1.1", "", "", "", "", "", "", &resources, start, stop, nil, 0)
+	common.Init("", "1.2.0", "", "", "", "", "", "", &resources, start, stop, nil, 0)
 }
 
 func createJWT(content interface{}) (string, error) {
@@ -524,6 +524,41 @@ func postOrder(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func sendMedicalData(w http.ResponseWriter, r *http.Request) {
+	common.DebugFunc()
+
+	action := func() (*http.Response, error) {
+		payload := r.FormValue("content")
+
+		common.Debug("payload: %+v\n", payload)
+
+		token, err := createJWT(nil)
+		if common.Error(err) {
+			return nil, err
+		}
+
+		headers := make(http.Header)
+		headers.Set("x-veracity-token", token)
+		headers.Set("Content-Type", common.MimetypeApplicationJson.MimeType)
+
+		resp, _, err := executeHttpRequest(http.MethodPost, headers, "", "", *baseUrl+"/v1/sendMedicalData", bytes.NewBuffer([]byte(payload)), http.StatusOK)
+
+		return resp, err
+	}
+
+	resp, err := action()
+	if common.Error(err) {
+		statuscode := http.StatusBadRequest
+		if resp != nil {
+			statuscode = resp.StatusCode
+		}
+
+		notify(w, r, err.Error(), statuscode)
+	} else {
+		notify(w, r, "Success!", http.StatusOK)
+	}
+}
+
 func basicAuth(next http.HandlerFunc) http.HandlerFunc {
 	common.DebugFunc()
 
@@ -633,6 +668,7 @@ func start() error {
 	mux.HandleFunc("/", resource(basicAuth(getHome)))
 	mux.HandleFunc("/patient", basicAuth(postPatient))
 	mux.HandleFunc("/order", basicAuth(postOrder))
+	mux.HandleFunc("/sendmedicaldata", basicAuth(sendMedicalData))
 
 	var tlsConfig *tls.Config
 
