@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head xmlns="http://www.w3.org/1999/html">
     {{if or .Success .Failure}}
     <meta http-equiv="refresh" content="2;url=/" />
@@ -24,6 +24,15 @@
             margin-right: auto;
         }
     </style>
+    <script src="script.js" type="text/javascript"></script>
+    <script type="text/javascript">
+        const Datas = new Map([
+            {{range .Datas}}
+                ["{{.Name}}","{{.Content}}"],
+            {{end}}
+        ]);
+        window.onLoad = function() { console.log('hallo'); };
+    </script>
 </head>
 <body>
 <div style="width: 750px; margin: auto;">
@@ -34,7 +43,7 @@
     <h3 style="text-align:center">Tenant: {{.Kid}}</h3>
     <h3 style="text-align:center">Sub: {{.Sub}}</h3>
     <br>
-    {{if .Success}} <h2 style="color: White; background-color: MediumSeaGreen; text-align:center">{{.Msg}}</h3> {{else}} {{if .Failure}} <h2 style="color: White; background-color: Crimson; text-align:center">{{.Statuscode}} {{.Msg}}</h3>{{end}}{{end}}
+    {{if .Success}} <h2 style="color: White; background-color: MediumSeaGreen; text-align:center">{{.Msg}}</h2> {{else}} {{if .Failure}} <h2 style="color: White; background-color: Crimson; text-align:center">{{.Statuscode}} {{.Msg}}</h2>{{end}}{{end}}
     <div style="float: left;">
         <form method="POST" action="/patient">
             <fieldset>
@@ -106,6 +115,19 @@
 -->
                 </fieldset>
 
+                <input type="submit">
+            </fieldset>
+        </form>
+    </div>
+    <div style="float: none;">
+        <form method="POST" action="/patient">
+            <fieldset>
+                <legend>Data</legend>
+
+                <label for="data" class="label">ID</label>
+                <select name="data" id="data">
+                {{range .Datas }}<option value="{{.Name}}">{{.Name}}</option>
+                {{end }}</select>
                 <input type="submit">
             </fieldset>
         </form>

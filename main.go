@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"crypto/sha256"
 	"crypto/subtle"
@@ -18,6 +19,8 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"os"
+	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -25,7 +28,7 @@ import (
 
 const (
 	YALOWWEB_INI = "yalowweb.ini"
-	INDEX_TMPL   = "index.tmpl"
+	INDEX_GOHTML = "index.gohtml"
 )
 
 type PatientForm struct {
@@ -46,6 +49,11 @@ type OrderForm struct {
 	Status          string
 }
 
+type Data struct {
+	Name    string
+	Content string
+}
+
 type Form struct {
 	Logo        string
 	Title       string
@@ -60,6 +68,7 @@ type Form struct {
 	Failure     bool
 	Msg         string
 	Statuscode  string
+	Datas       []Data
 }
 
 type Identifier struct {
@@ -127,13 +136,14 @@ var (
 	password  = flag.String("password", "", "password")
 	timeout   = flag.Int("timeout", 10000, "http request timeout")
 	useTls    = flag.Bool("tls", false, "use TLS")
-	baseUrl   = flag.String("baseUrl", "", "baseUrl")     // https://ew1.veracitydoc.com/api/emr-integration/api-docs
-	kid       = flag.String("kid", "", "kid")             // postman:dev:a
-	tenant    = flag.String("tenant", "", "tenant")       // emr-yala
-	sub       = flag.String("sub", "", "sub")             // EMR Web Simulator
-	cLocation = flag.String("cLocation", "", "cLocation") // location1
-	provider  = flag.String("provider", "", "provider")   // provider1
-	secret    = flag.String("secret", "", "secret")       // postman-dev-a.private.pem (in diesem Beispiel der Name der Datei)
+	baseUrl   = flag.String("baseUrl", "", "baseUrl")            // https://ew1.veracitydoc.com/api/emr-integration/api-docs
+	kid       = flag.String("kid", "", "kid")                    // postman:dev:a
+	tenant    = flag.String("tenant", "", "tenant")              // emr-yala
+	sub       = flag.String("sub", "", "sub")                    // EMR Web Simulator
+	cLocation = flag.String("cLocation", "", "cLocation")        // location1
+	provider  = flag.String("provider", "", "provider")          // provider1
+	secret    = flag.String("secret", "", "secret")              // postman-dev-a.private.pem (in diesem Beispiel der Name der Datei)
+	path      = flag.String("path", "", "path to message files") // postman-dev-a.private.pem (in diesem Beispiel der Name der Datei)
 
 	indexTmpl []byte
 	srv       *http.Server
@@ -142,9 +152,11 @@ var (
 )
 
 //go:embed go.mod
-//go:embed index.tmpl
+//go:embed index.gohtml
 //go:embed yalowweb.ini
 //go:embed logo.png
+//go:embed script.js
+//go:embed favicon.ico
 var resources embed.FS
 
 func init() {
@@ -253,26 +265,26 @@ func executeHttpRequest(method string, headers http.Header, username string, pas
 }
 
 func getHome(w http.ResponseWriter, r *http.Request) {
-	defer func() {
-		form.Success = false
-		form.Failure = false
-		form.Msg = ""
-	}()
-
 	common.DebugFunc()
 
 	action := func() error {
+		defer func() {
+			form.Success = false
+			form.Failure = false
+			form.Msg = ""
+		}()
+
 		var err error
 		var tmpl *template.Template
 
 		if common.IsRunningAsExecutable() {
-			tmpl = template.New(INDEX_TMPL)
+			tmpl = template.New(INDEX_GOHTML)
 			tmpl, err = tmpl.Parse(string(indexTmpl))
 			if common.Error(err) {
 				return err
 			}
 		} else {
-			tmpl, err = template.ParseFiles(INDEX_TMPL)
+			tmpl, err = template.ParseFiles(INDEX_GOHTML)
 			if common.Error(err) {
 				return err
 			}
@@ -284,6 +296,34 @@ func getHome(w http.ResponseWriter, r *http.Request) {
 		form.CurrentDate = today
 		form.Patient = PatientForm{}
 		form.Order = OrderForm{}
+		form.Datas = nil
+
+		if *path != "" {
+			err := common.WalkFiles(*path, false, false, func(path string, fi os.FileInfo) error {
+				if fi.IsDir() {
+					return nil
+				}
+
+				ba, err := os.ReadFile(path)
+				if common.Error(err) {
+					return err
+				}
+
+				form.Datas = append(form.Datas, Data{
+					Name:    filepath.Base(path),
+					Content: string(ba),
+				})
+
+				sort.Slice(form.Datas, func(i, j int) bool {
+					return cmp.Compare(form.Datas[i].Name, form.Datas[j].Name) < 0
+				})
+
+				return nil
+			})
+			if common.Error(err) {
+				return err
+			}
+		}
 
 		err = tmpl.Execute(w, form)
 		if common.Error(err) {
@@ -519,6 +559,39 @@ func basicAuth(next http.HandlerFunc) http.HandlerFunc {
 	})
 }
 
+func resource(next http.HandlerFunc) http.HandlerFunc {
+	common.DebugFunc()
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		action := func() error {
+			if r.URL.Path != "" {
+				resourceName := r.URL.Path[1:]
+
+				res, mimeType, err := common.ReadResource(resourceName)
+				if err == nil {
+					w.Header().Add("Content-Type", mimeType)
+					w.WriteHeader(http.StatusOK)
+					_, err := w.Write(res)
+					if common.Error(err) {
+						return err
+					}
+
+					common.Debug("request resource: %s", resourceName)
+
+					return nil
+				}
+			}
+
+			return fmt.Errorf("unknown resource: %s", r.URL.Path)
+		}
+
+		err := action()
+		if err != nil {
+			next.ServeHTTP(w, r)
+		}
+	})
+}
+
 func start() error {
 	common.DebugFunc()
 
@@ -536,7 +609,7 @@ func start() error {
 
 	var err error
 
-	indexTmpl, _, err = common.ReadResource(INDEX_TMPL)
+	indexTmpl, _, err = common.ReadResource(INDEX_GOHTML)
 	if common.Error(err) {
 		return err
 	}
@@ -557,7 +630,7 @@ func start() error {
 
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/", basicAuth(getHome))
+	mux.HandleFunc("/", resource(basicAuth(getHome)))
 	mux.HandleFunc("/patient", basicAuth(postPatient))
 	mux.HandleFunc("/order", basicAuth(postOrder))
 
