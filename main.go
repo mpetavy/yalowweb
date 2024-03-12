@@ -599,7 +599,7 @@ func resource(next http.HandlerFunc) http.HandlerFunc {
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		action := func() error {
-			if r.URL.Path != "" {
+			if r.URL.Path != "/" {
 				resourceName := r.URL.Path[1:]
 
 				res, mimeType, err := common.ReadResource(resourceName)

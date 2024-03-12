@@ -23,6 +23,11 @@
             margin-left: auto;
             margin-right: auto;
         }
+
+        .texarea-form-control {
+            display: block;
+            margin-bottom: 10px;
+        }
     </style>
     <script src="script.js" type="text/javascript"></script>
     <script type="text/javascript">
@@ -126,8 +131,9 @@
                 <select name="data" id="data" onchange="onDataChange();">
                 {{range .Datas }}<option value="{{.Name}}">{{.Name}}</option>
                 {{end }}</select>
-
-                <textarea name="content" id="content" wrap="off" rows="10" cols="85"></textarea>
+                <p>
+                <label for="control" class="label">Content</label>
+                <textarea name="content" id="content" wrap="off" rows="10" class="texarea-form-control" cols="93"></textarea>
 
                 <input type="submit">
             </fieldset>
