@@ -136,14 +136,14 @@ var (
 	password  = flag.String("password", "", "password")
 	timeout   = flag.Int("timeout", 10000, "http request timeout")
 	useTls    = flag.Bool("tls", false, "use TLS")
-	baseUrl   = flag.String("baseUrl", "", "baseUrl")            // https://ew1.veracitydoc.com/api/emr-integration/api-docs
-	kid       = flag.String("kid", "", "kid")                    // postman:dev:a
-	tenant    = flag.String("tenant", "", "tenant")              // emr-yala
-	sub       = flag.String("sub", "", "sub")                    // EMR Web Simulator
-	cLocation = flag.String("cLocation", "", "cLocation")        // location1
-	provider  = flag.String("provider", "", "provider")          // provider1
-	secret    = flag.String("secret", "", "secret")              // postman-dev-a.private.pem (in diesem Beispiel der Name der Datei)
-	path      = flag.String("path", "", "path to message files") // postman-dev-a.private.pem (in diesem Beispiel der Name der Datei)
+	baseUrl   = flag.String("baseUrl", "", "baseUrl")                // https://ew1.veracitydoc.com/api/emr-integration/api-docs
+	kid       = flag.String("kid", "", "kid")                        // postman:dev:a
+	tenant    = flag.String("tenant", "", "tenant")                  // emr-yala
+	sub       = flag.String("sub", "", "sub")                        // EMR Web Simulator
+	cLocation = flag.String("cLocation", "", "cLocation")            // location1
+	provider  = flag.String("provider", "", "provider")              // provider1
+	secret    = flag.String("secret", "", "secret")                  // postman-dev-a.private.pem (in diesem Beispiel der Name der Datei)
+	datapath  = flag.String("datapath", "", "path to message files") // postman-dev-a.private.pem (in diesem Beispiel der Name der Datei)
 
 	indexTmpl []byte
 	srv       *http.Server
@@ -298,8 +298,8 @@ func getHome(w http.ResponseWriter, r *http.Request) {
 		form.Order = OrderForm{}
 		form.Datas = nil
 
-		if *path != "" {
-			err := common.WalkFiles(*path, false, false, func(path string, fi os.FileInfo) error {
+		if *datapath != "" {
+			err := common.WalkFiles(*datapath, false, false, func(path string, fi os.FileInfo) error {
 				if fi.IsDir() {
 					return nil
 				}
@@ -668,7 +668,7 @@ func start() error {
 	mux.HandleFunc("/", resource(basicAuth(getHome)))
 	mux.HandleFunc("/patient", basicAuth(postPatient))
 	mux.HandleFunc("/order", basicAuth(postOrder))
-	mux.HandleFunc("/sendmedicaldata", basicAuth(sendMedicalData))
+	mux.HandleFunc("/sendMedicalData", basicAuth(sendMedicalData))
 
 	var tlsConfig *tls.Config
 

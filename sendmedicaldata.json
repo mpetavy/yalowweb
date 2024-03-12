@@ -1,0 +1,239 @@
+{
+  "patientId": "4422",
+  "medicalData": {
+    "dominantEye": "OS",
+    "comanager": {
+      "firstName": "Robert",
+      "lastName": "George",
+      "degree": "MD",
+      "officePhone": "(333) 333-3333",
+      "addressLine1": "5000 Burnet",
+      "addressLine2": "Ste 200",
+      "city": "Austin",
+      "state": "TX",
+      "zipCode": "78767",
+      "country": "US",
+      "emailAddress": "dremail@aol.com"
+    },
+    "refractions": [
+      {
+        "date": "2016-11-06T00:00:00Z",
+        "emrId": "r1",
+        "type": "Manual MR",
+        "odSphere": "-2.00",
+        "odCylinder": "-0.50",
+        "odAxis": "98",
+        "osSphere": "-2.50",
+        "osCylinder": "-0.50",
+        "osAxis": "88",
+        "acuityNear": {
+          "date": "2016-11-06T00:00:00Z",
+          "emrId": "near-1429",
+          "type": "bestCorrectedNearVA",
+          "od": "J3 ",
+          "os": "J1 "
+        },
+        "acuityDistance": {
+          "date": "2016-11-06T00:00:00Z",
+          "emrId": "dist-1429",
+          "type": "bestCorrectedDistanceVA",
+          "od": "20/50 ",
+          "os": "20/20 +2"
+        },
+        "technician": "tech initials"
+      }
+    ],
+    "glasses": [
+      {
+        "date": "2016-09-27T00:00:00Z",
+        "emrId": "g1",
+        "type": "Bifocal",
+        "usage": "COMPUTER",
+        "odSphere": "-2.00",
+        "odCylinder": "-0.25",
+        "odAxis": "98",
+        "odPrism": "1.5 BI",
+        "odAdd": "+2.75",
+        "osSphere": "-2.25",
+        "osCylinder": "-0.50",
+        "osAxis": "88",
+        "osPrism": "1.5 BI",
+        "osAdd": "+2.75",
+        "acuityNear": {
+          "date": "2016-09-27T00:00:00Z",
+          "emrId": "near-g1",
+          "od": "J3 ",
+          "os": "J1 "
+        },
+        "acuityDistance": {
+          "date": "2016-09-27T00:00:00Z",
+          "emrId": "dist-g2",
+          "od": "20/50",
+          "os": "20/20 +2"
+        }
+      }
+    ],
+    "otherAcuities": [
+      {
+        "date": "2016-09-06T00:00:00Z",
+        "emrId": "oa-428",
+        "type": "Uncorrected",
+        "od": "20/50 -2",
+        "os": "20/60 "
+      },
+      {
+        "date": "2016-09-06T00:00:00Z",
+        "emrId": "oa-429",
+        "type": "BUVA",
+        "od": "J4 ",
+        "os": "J5 "
+      }
+    ],
+    "brightnessAcuityTests": [
+      {
+        "emrId": "bat1",
+        "date": "2017-01-07T14:30:00+0000",
+        "odHigh": "6/200",
+        "odLow": "20/60",
+        "odMed": "20/100",
+        "osHigh": "6/200",
+        "osLow": "20/70",
+        "osMed": "20/100",
+        "type": "BAT"
+      }
+    ],
+    "medications": [
+      {
+        "brandName": "simvastatin",
+        "comments": "Patient remarks that this medicine seems to be really helping her.",
+        "compliance": "Compliant",
+        "description": "simvastatin",
+        "dose": "tablet: 5 mg",
+        "emrId": "meds1",
+        "isOcular": false,
+        "ndcCode": "00093715298",
+        "rxNormCode": "312962",
+        "startDate": "2016-11-01T00:00:00Z",
+        "stopDate": "2017-05-01T00:00:00Z",
+        "coding": [
+          {
+            "system": "http://snomed.info/sct",
+            "code": "376834003"
+          }
+        ]
+      },
+      {
+        "brandName": "Vigamox",
+        "comments": "Patient's been on this for a while now.",
+        "compliance": "Compliant",
+        "description": "Vigamox",
+        "dose": "drops: 0.5% 1 drop at bedtime as directed into both eyes",
+        "emrId": "medo2",
+        "isOcular": true,
+        "ndcCode": "00065401303",
+        "rxNormCode": "404473",
+        "startDate": "2016-11-01T00:00:00Z",
+        "stopDate": null
+      }
+    ],
+    "allergies": [
+      {
+        "comments": "Severe reaction is rare, subtle reaction is more frequent.",
+        "emrId": "al1",
+        "name": "neomycin",
+        "ndcCode": "00093117701",
+        "startDate": "2000-02-02T00:00:00Z",
+        "reaction": "Rash",
+        "rxNormCode": "866042",
+        "status": "Active",
+        "coding": [
+          {
+            "system": "http://snomed.info/sct",
+            "code": "373528008"
+          }
+        ]
+      }
+    ],
+    "pastSurgeries": [
+      {
+        "emrId": "1643",
+        "description": "Cataract extraction, phaco with IOL",
+        "date": "2017-03-06T15:00:00Z",
+        "isDateApproximate": false,
+        "isDateUnknown": false,
+        "displayableDate": "7/6/2013",
+        "laterality": "LEFT EYE",
+        "cptCode": "66984",
+        "surgeon": "Tom Crow M.D.",
+        "comments": "Patient seems well on the way to recovery.",
+        "veracityProcedureId": "abc123"
+      },
+      {
+        "emrId": "1645",
+        "description": "Blepharoplasty Upper Eyelid",
+        "date": "2006-11-29T00:00:00Z",
+        "isDateApproximate": true,
+        "isDateUnknown": true,
+        "displayableDate": "2007",
+        "laterality": "RIGHT & LEFT UPPER EYELIDS",
+        "cptCode": "15822",
+        "surgeon": "Rachel Mcdonald M.D.",
+        "comments": null,
+        "veracityProcedureId": null,
+        "coding": [
+          {
+            "system": "http://snomed.info/sct",
+            "code": "46142005"
+          }
+        ]
+      }
+    ],
+    "keratometries": [
+      {
+        "date": "2016-11-30T14:00:00Z",
+        "emrId": "k1",
+        "type": "Manual keratometry",
+        "odK1Power": "46",
+        "odK1Axis": "165",
+        "odK2Power": "42",
+        "odK2Axis": "75",
+        "osK1Power": "44",
+        "osK1Axis": "100",
+        "osK2Power": "42",
+        "osK2Axis": "10"
+      }
+    ],
+    "pachymetries": [
+      {
+        "emrId": "pachy1",
+        "date": "2015-01-07T14:30:00Z",
+        "odCentralReading": 520,
+        "odPeripheralReading": 525,
+        "osCentralReading": 532,
+        "osPeripheralReading": 524
+      }
+    ],
+    "problems": [
+      {
+        "description": "Pseudophakia",
+        "emrId": "prob-3313",
+        "icd10Code": "Z96.1",
+        "laterality": "left eye",
+        "isOcular": true,
+        "isPrimary": false,
+        "stability": "STABLE",
+        "status": "ACTIVE",
+        "symptomatic": "NORMAL"
+      }
+    ],
+    "intraocularPressures": [
+      {
+        "emrId": "i1",
+        "date": "2016-11-06T00:00:00Z",
+        "testingMethod": "IOP testing method",
+        "odMmHg": 20,
+        "osMmHg": 21
+      }
+    ]
+  }
+}
