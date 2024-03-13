@@ -160,7 +160,7 @@ var (
 var resources embed.FS
 
 func init() {
-	common.Init("", "1.3.0", "", "", "", "", "", "", &resources, start, stop, nil, 0)
+	common.Init("", "1.3.1", "", "", "", "", "", "", &resources, start, stop, nil, 0)
 }
 
 func createJWT(content interface{}) (string, error) {
