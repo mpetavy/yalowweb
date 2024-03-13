@@ -4,7 +4,7 @@ go 1.21.4
 
 require (
 	github.com/golang-jwt/jwt/v5 v5.2.0
-	github.com/mpetavy/common v1.7.6
+	github.com/mpetavy/common v1.7.7
 )
 
 require (

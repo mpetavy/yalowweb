@@ -275,19 +275,11 @@ func getHome(w http.ResponseWriter, r *http.Request) {
 		}()
 
 		var err error
-		var tmpl *template.Template
 
-		if common.IsRunningAsExecutable() {
-			tmpl = template.New(INDEX_GOHTML)
-			tmpl, err = tmpl.Parse(string(indexTmpl))
-			if common.Error(err) {
-				return err
-			}
-		} else {
-			tmpl, err = template.ParseFiles(INDEX_GOHTML)
-			if common.Error(err) {
-				return err
-			}
+		tmpl := template.New(INDEX_GOHTML)
+		tmpl, err = tmpl.Parse(string(indexTmpl))
+		if common.Error(err) {
+			return err
 		}
 
 		today := time.Now().Format(time.RFC3339)
